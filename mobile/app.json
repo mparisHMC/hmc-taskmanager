@@ -22,7 +22,7 @@
       "package": "com.healthmarketconnect.taskflow"
     },
     "extra": {
-      "apiBaseUrl": "http://192.168.22.123:3001"
+      "apiBaseUrl": "https://taskflow-api-one.vercel.app"
     }
   }
 }
