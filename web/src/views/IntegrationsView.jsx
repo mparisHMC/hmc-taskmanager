@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { integrationsApi } from '../api/client';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 const INTEGRATIONS = [
-  { id: 'google', name: 'Google', letter: 'G', color: '#4285F4', scopes: 'Calendar · Tasks · Gmail', authPath: '/auth/google' },
-  { id: 'slack',  name: 'Slack',  letter: 'S', color: '#4A154B', scopes: 'DMs · Reminders · Alerts', authPath: null },
-  { id: 'outlook',name: 'Outlook',letter: 'O', color: '#0078D4', scopes: 'Calendar · Tasks · Email', authPath: null },
-  { id: 'asana',  name: 'Asana',  letter: 'A', color: '#F06A6A', scopes: 'Tasks · Projects · Teams', authPath: null },
+  { id: 'google',  name: 'Google',  letter: 'G', color: '#4285F4', scopes: 'Calendar · Tasks · Gmail',      authPath: `${API_URL}/auth/google` },
+  { id: 'slack',   name: 'Slack',   letter: 'S', color: '#4A154B', scopes: 'DMs · Reminders · Alerts',      authPath: 'builtin' },
+  { id: 'outlook', name: 'Outlook', letter: 'O', color: '#0078D4', scopes: 'Calendar · Tasks · Email',       authPath: null },
+  { id: 'asana',   name: 'Asana',   letter: 'A', color: '#F06A6A', scopes: 'Tasks · Projects · Teams',       authPath: null },
 ];
 
 export default function IntegrationsView() {
@@ -108,7 +110,15 @@ export default function IntegrationsView() {
                     </button>
                   )}
                   {/* Connect / Disconnect */}
-                  {int.authPath ? (
+                  {int.authPath === 'builtin' ? (
+                    // Slack is pre-configured via bot token — show status only
+                    <span style={{
+                      background: connected ? '#f0fdf4' : '#f3f4f6',
+                      color: connected ? '#16a34a' : '#9ca3af',
+                      borderRadius: 8, padding: '7px 16px',
+                      fontWeight: 600, fontSize: 13,
+                    }}>{connected ? 'Connected ✓' : 'Configured'}</span>
+                  ) : int.authPath ? (
                     <a
                       href={connected ? '#' : int.authPath}
                       onClick={connected ? (e) => { e.preventDefault(); showToast('Disconnect from Settings → Integrations'); } : undefined}
@@ -134,17 +144,4 @@ export default function IntegrationsView() {
             );
           })}
 
-          <div style={{ marginTop: 8, padding: '14px 16px', background: '#fffbeb', borderRadius: 10, border: '1px solid #fde68a', fontSize: 13, color: '#92400e' }}>
-            ℹ️ Google Calendar and Tasks sync automatically every 30 minutes once connected. Slack sends daily digests and overdue alerts at your scheduled times.
-          </div>
-        </div>
-      </div>
-
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 24, right: 24, background: '#1e1b4b', color: '#fff', padding: '12px 20px', borderRadius: 10, fontSize: 14, fontWeight: 500, boxShadow: '0 8px 30px rgba(0,0,0,0.25)', zIndex: 9999 }}>
-          {toast}
-        </div>
-      )}
-    </div>
-  );
-}
+          <div style={{ marginTop: 8, padding: '14px 16px', background: '#fffb
