@@ -1,5 +1,5 @@
 const { google } = require('googleapis');
-const db = require('../db/database');
+const db = require('../db');
 require('dotenv').config();
 
 function getAuthClient() {

@@ -1,14 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db/database');
+const db = require('../db');
 const google = require('../services/google');
 const slack = require('../services/slack');
 const notifications = require('../services/notifications');
 
 // GET /api/integrations/status
 router.get('/status', async (req, res) => {
-  const settings = db.getSettings();
-  const slackStatus = await slack.testConnection();
+  const [settings, slackStatus] = await Promise.all([
+    Promise.resolve(db.getSettings()),
+    slack.testConnection(),
+  ]);
 
   res.json({
     google: {
@@ -44,25 +46,28 @@ router.post('/slack/test', async (req, res) => {
 });
 
 // GET /api/settings
-router.get('/settings', (req, res) => {
-  const s = db.getSettings();
-  // Don't expose raw token
-  res.json({
-    notifications: Boolean(s.notifications),
-    daily_digest: Boolean(s.daily_digest),
-    digest_time: s.digest_time,
-    weekly_review: Boolean(s.weekly_review),
-    review_day: s.review_day,
-    slack_alerts: Boolean(s.slack_alerts),
-    google_sync: Boolean(s.google_sync),
-  });
+router.get('/settings', async (req, res) => {
+  try {
+    const s = await Promise.resolve(db.getSettings());
+    res.json({
+      notifications: Boolean(s.notifications),
+      daily_digest: Boolean(s.daily_digest),
+      digest_time: s.digest_time,
+      weekly_review: Boolean(s.weekly_review),
+      review_day: s.review_day,
+      slack_alerts: Boolean(s.slack_alerts),
+      google_sync: Boolean(s.google_sync),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // PATCH /api/settings
-router.patch('/settings', (req, res) => {
+router.patch('/settings', async (req, res) => {
   try {
-    const updated = db.updateSettings(req.body);
-    notifications.restartJobs(); // restart crons if digest time changed
+    const updated = await Promise.resolve(db.updateSettings(req.body));
+    notifications.restartJobs();
     res.json({
       notifications: Boolean(updated.notifications),
       daily_digest: Boolean(updated.daily_digest),

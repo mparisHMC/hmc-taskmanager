@@ -1,5 +1,5 @@
 const cron = require('node-cron');
-const db = require('../db/database');
+const db = require('../db');
 const slack = require('./slack');
 const google = require('./google');
 

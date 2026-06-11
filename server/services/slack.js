@@ -1,5 +1,5 @@
 const { App } = require('@slack/bolt');
-const db = require('../db/database');
+const db = require('../db');
 require('dotenv').config();
 
 let slackApp = null;

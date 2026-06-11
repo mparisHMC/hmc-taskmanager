@@ -14,7 +14,7 @@
 
 const express = require('express');
 const router = express.Router();
-const db = require('../db/database');
+const db = require('../db');
 
 // POST /api/cowork/task — push a task from a Cowork session
 router.post('/task', (req, res) => {

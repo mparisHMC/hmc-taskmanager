@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { google } = require('googleapis');
-const db = require('../db/database');
+const db = require('../db');
 require('dotenv').config();
 
 const WEB_URL = process.env.WEB_URL || 'http://localhost:5173';
@@ -62,4 +62,9 @@ router.get('/status', async (req, res) => {
 });
 
 // POST /auth/google/disconnect
-router.post('/google/disconnect', asyn
+router.post('/google/disconnect', async (req, res) => {
+  await Promise.resolve(db.updateSettings({ google_token: null, google_sync: 0 }));
+  res.json({ success: true });
+});
+
+module.exports = { router, oauth2Client };
