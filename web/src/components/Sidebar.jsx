@@ -8,7 +8,7 @@ const navItems = [
   { to: '/settings',     icon: '⚙️', label: 'Settings',     key: null },
 ];
 
-export default function Sidebar({ tasks, userName }) {
+export default function Sidebar({ tasks, userName, onLogout }) {
   function countPending(category) {
     return tasks.filter(t => t.category === category && !t.done).length;
   }
@@ -65,8 +65,5 @@ export default function Sidebar({ tasks, userName }) {
           {(userName || 'M')[0].toUpperCase()}
         </div>
         <div style={{ fontSize: 13, color: '#e0e7ff', fontWeight: 600 }}>{userName || 'Mackenzie'}</div>
-        <div style={{ fontSize: 11, color: '#818cf8' }}>Project Coordinator</div>
-      </div>
-    </aside>
-  );
-}
+        <div style={{ fontSize: 11, color: '#818cf8', marginBottom: 8 }}>Project Coordinator</div>
+      

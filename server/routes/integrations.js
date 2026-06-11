@@ -3,7 +3,6 @@ const router = express.Router();
 const db = require('../db');
 const google = require('../services/google');
 const slack = require('../services/slack');
-const notifications = require('../services/notifications');
 
 // GET /api/integrations/status
 router.get('/status', async (req, res) => {
@@ -25,7 +24,7 @@ router.get('/status', async (req, res) => {
   });
 });
 
-// POST /api/integrations/google/sync — manual trigger
+// POST /api/integrations/google/sync
 router.post('/google/sync', async (req, res) => {
   try {
     const result = await google.syncAll();
@@ -35,48 +34,11 @@ router.post('/google/sync', async (req, res) => {
   }
 });
 
-// POST /api/integrations/slack/test — send a test DM
+// POST /api/integrations/slack/test
 router.post('/slack/test', async (req, res) => {
   try {
-    await slack.sendDM('👋 TaskFlow is connected! Your alerts are working.');
+    await slack.sendDM('TaskFlow is connected! Your alerts are working.');
     res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/settings
-router.get('/settings', async (req, res) => {
-  try {
-    const s = await Promise.resolve(db.getSettings());
-    res.json({
-      notifications: Boolean(s.notifications),
-      daily_digest: Boolean(s.daily_digest),
-      digest_time: s.digest_time,
-      weekly_review: Boolean(s.weekly_review),
-      review_day: s.review_day,
-      slack_alerts: Boolean(s.slack_alerts),
-      google_sync: Boolean(s.google_sync),
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// PATCH /api/settings
-router.patch('/settings', async (req, res) => {
-  try {
-    const updated = await Promise.resolve(db.updateSettings(req.body));
-    notifications.restartJobs();
-    res.json({
-      notifications: Boolean(updated.notifications),
-      daily_digest: Boolean(updated.daily_digest),
-      digest_time: updated.digest_time,
-      weekly_review: Boolean(updated.weekly_review),
-      review_day: updated.review_day,
-      slack_alerts: Boolean(updated.slack_alerts),
-      google_sync: Boolean(updated.google_sync),
-    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

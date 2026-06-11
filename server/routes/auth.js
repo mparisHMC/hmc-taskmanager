@@ -1,10 +1,46 @@
 const express = require('express');
 const router = express.Router();
 const { google } = require('googleapis');
+const { createClient } = require('@supabase/supabase-js');
 const db = require('../db');
 require('dotenv').config();
 
 const WEB_URL = process.env.WEB_URL || 'http://localhost:5173';
+
+// Apex CRM Supabase client (auth source)
+const apexSupabase = createClient(
+  process.env.APEX_SUPABASE_URL,
+  process.env.APEX_SUPABASE_ANON_KEY
+);
+
+// POST /auth/login
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+
+  const { data, error } = await apexSupabase.auth.signInWithPassword({ email, password });
+  if (error) return res.status(401).json({ error: 'Invalid email or password' });
+
+  const user = data.user;
+  req.session.user = {
+    id: user.id,
+    email: user.email,
+    name: user.user_metadata?.full_name || user.email.split('@')[0],
+  };
+
+  res.json({ ok: true, user: req.session.user });
+});
+
+// POST /auth/logout
+router.post('/logout', (req, res) => {
+  req.session.destroy(() => res.json({ ok: true }));
+});
+
+// GET /auth/me
+router.get('/me', (req, res) => {
+  if (!req.session.user) return res.status(401).json({ error: 'Not authenticated' });
+  res.json({ user: req.session.user });
+});
 
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,

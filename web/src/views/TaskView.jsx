@@ -23,7 +23,7 @@ function ProgressBar({ tasks }) {
   );
 }
 
-export default function TaskView({ category }) {
+export default function TaskView({ category, onTaskChange }) {
   const { tasks, loading, error, reload, createTask, updateTask, deleteTask, toggleTask } = useTasks(category);
   const [modal, setModal] = useState(null); // null | 'new' | task
   const [filter, setFilter] = useState('all');
@@ -44,6 +44,7 @@ export default function TaskView({ category }) {
         showToast('Task added!');
       }
       setModal(null);
+      onTaskChange?.();
     } catch (e) {
       showToast('Error: ' + e.message);
     }
@@ -52,10 +53,12 @@ export default function TaskView({ category }) {
   async function handleDelete(id) {
     await deleteTask(id);
     showToast('Task deleted.');
+    onTaskChange?.();
   }
 
   async function handleToggle(id) {
     await toggleTask(id);
+    onTaskChange?.();
   }
 
   const filtered = tasks.filter(t => {
@@ -172,6 +175,4 @@ function getWeekRange() {
   monday.setDate(now.getDate() - ((day + 6) % 7));
   const friday = new Date(monday);
   friday.setDate(monday.getDate() + 4);
-  const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  return `${fmt(monday)} – ${fmt(friday)}`;
-}
+  const fmt = d => d.toLocaleDateString('en-US', { m

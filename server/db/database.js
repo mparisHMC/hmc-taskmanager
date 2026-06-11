@@ -1,7 +1,7 @@
 const { DatabaseSync } = require('node:sqlite');
 const path = require('path');
 const fs = require('fs');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
 const DB_PATH = process.env.DB_PATH || './taskflow.db';
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
@@ -13,15 +13,12 @@ function getDb() {
     db = new DatabaseSync(path.resolve(DB_PATH));
     db.exec('PRAGMA journal_mode = WAL');
     db.exec('PRAGMA foreign_keys = ON');
-
-    // Run schema on first connect
     const schema = fs.readFileSync(SCHEMA_PATH, 'utf8');
     db.exec(schema);
   }
   return db;
 }
 
-// transaction() helper — mirrors better-sqlite3's db.transaction(fn)(args)
 function makeTransaction(fn) {
   return function (...args) {
     const d = getDb();
@@ -37,25 +34,30 @@ function makeTransaction(fn) {
   };
 }
 
-// ─── Task helpers ─────────────────────────────────────────────────────────────
+// ── Task helpers ──────────────────────────────────────────────────────────────
 
 function getAllTasks(category) {
   const d = getDb();
-  if (category) return d.prepare('SELECT * FROM tasks WHERE category = ? ORDER BY done ASC, priority DESC, due ASC').all(category);
-  return d.prepare('SELECT * FROM tasks ORDER BY done ASC, priority DESC, due ASC').all();
+  if (category) {
+    return d.prepare(
+      'SELECT * FROM tasks WHERE category = @category ORDER BY done ASC, priority DESC, due ASC'
+    ).all({ category });
+  }
+  return d.prepare(
+    'SELECT * FROM tasks ORDER BY done ASC, priority DESC, due ASC'
+  ).all();
 }
 
 function getTask(id) {
-  return getDb().prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+  return getDb().prepare('SELECT * FROM tasks WHERE id = @id').get({ id });
 }
 
 function createTask(task) {
   const d = getDb();
-  const stmt = d.prepare(`
+  const result = d.prepare(`
     INSERT INTO tasks (title, notes, priority, category, source, done, due, external_id)
     VALUES (@title, @notes, @priority, @category, @source, @done, @due, @external_id)
-  `);
-  const result = stmt.run({
+  `).run({
     title: task.title,
     notes: task.notes || '',
     priority: task.priority || 'medium',
@@ -63,7 +65,7 @@ function createTask(task) {
     source: task.source || 'manual',
     done: task.done ? 1 : 0,
     due: task.due || null,
-    external_id: task.external_id || null
+    external_id: task.external_id || null,
   });
   return getTask(result.lastInsertRowid);
 }
@@ -77,24 +79,37 @@ function updateTask(id, updates) {
       title = @title, notes = @notes, priority = @priority,
       category = @category, source = @source, done = @done, due = @due
     WHERE id = @id
-  `).run({ ...merged, done: merged.done ? 1 : 0, id });
+  `).run({
+    title: merged.title,
+    notes: merged.notes || '',
+    priority: merged.priority,
+    category: merged.category,
+    source: merged.source,
+    done: merged.done ? 1 : 0,
+    due: merged.due ?? null,
+    id: id,
+  });
   return getTask(id);
 }
 
 function deleteTask(id) {
-  return getDb().prepare('DELETE FROM tasks WHERE id = ?').run(id);
+  return getDb().prepare('DELETE FROM tasks WHERE id = @id').run({ id });
 }
 
 function upsertByExternalId(task) {
-  const existing = getDb().prepare('SELECT * FROM tasks WHERE external_id = ?').get(task.external_id);
+  const existing = getDb()
+    .prepare('SELECT * FROM tasks WHERE external_id = @external_id')
+    .get({ external_id: task.external_id });
   if (existing) return updateTask(existing.id, task);
   return createTask(task);
 }
 
-// ─── Settings helpers ─────────────────────────────────────────────────────────
+// ── Settings helpers ──────────────────────────────────────────────────────────
 
 function getSettings(userId = 1) {
-  return getDb().prepare('SELECT * FROM settings WHERE user_id = ?').get(userId);
+  return getDb()
+    .prepare('SELECT * FROM settings WHERE user_id = @user_id ORDER BY id ASC LIMIT 1')
+    .get({ user_id: userId });
 }
 
 function updateSettings(updates, userId = 1) {
@@ -111,14 +126,24 @@ function updateSettings(updates, userId = 1) {
       google_sync = @google_sync,
       google_token = @google_token,
       updated_at = datetime('now')
-    WHERE user_id = @user_id
-  `).run({ ...merged, user_id: userId });
+    WHERE user_id = @user_id AND id = @id
+  `).run({
+    notifications: merged.notifications ?? 1,
+    daily_digest: merged.daily_digest ?? 1,
+    digest_time: merged.digest_time ?? '08:00',
+    weekly_review: merged.weekly_review ?? 1,
+    review_day: merged.review_day ?? 'Monday',
+    slack_alerts: merged.slack_alerts ?? 1,
+    google_sync: merged.google_sync ?? 0,
+    google_token: merged.google_token ?? null,
+    user_id: userId,
+    id: existing.id,
+  });
   return getSettings(userId);
 }
 
-// ─── Auto-generation helpers ───────────────────────────────────────────────────
+// ── Auto-seed helpers ─────────────────────────────────────────────────────────
 
-// Default recurring daily tasks seeded if none exist for today
 const DEFAULT_DAILY = [
   { title: 'Check and triage email inbox', priority: 'high' },
   { title: 'Review and respond to Slack messages', priority: 'medium' },
@@ -138,13 +163,17 @@ const DEFAULT_WEEKLY = [
 function seedDailyTasksIfEmpty() {
   const d = getDb();
   const today = new Date().toISOString().slice(0, 10);
-  const existing = d.prepare("SELECT COUNT(*) as cnt FROM tasks WHERE category = 'daily' AND due = ?").get(today);
+  const existing = d.prepare(
+    "SELECT COUNT(*) as cnt FROM tasks WHERE category = 'daily' AND due = @today"
+  ).get({ today });
   if (existing.cnt === 0) {
     const insert = d.prepare(`
       INSERT INTO tasks (title, priority, category, source, due)
       VALUES (@title, @priority, 'daily', 'manual', @due)
     `);
-    const insertMany = makeTransaction((tasks) => tasks.forEach(t => insert.run({ ...t, due: today })));
+    const insertMany = makeTransaction((tasks) =>
+      tasks.forEach(t => insert.run({ ...t, due: today }))
+    );
     insertMany(DEFAULT_DAILY);
     console.log(`[DB] Seeded ${DEFAULT_DAILY.length} default daily tasks for ${today}`);
   }
@@ -152,39 +181,22 @@ function seedDailyTasksIfEmpty() {
 
 function seedWeeklyTasksIfEmpty() {
   const d = getDb();
-  // Get Monday of current week
   const now = new Date();
   const day = now.getDay();
   const monday = new Date(now);
   monday.setDate(now.getDate() - ((day + 6) % 7));
   const weekStart = monday.toISOString().slice(0, 10);
 
-  const existing = d.prepare("SELECT COUNT(*) as cnt FROM tasks WHERE category = 'weekly' AND due >= ?").get(weekStart);
+  const existing = d.prepare(
+    "SELECT COUNT(*) as cnt FROM tasks WHERE category = 'weekly' AND due >= @weekStart"
+  ).get({ weekStart });
   if (existing.cnt === 0) {
     const friday = new Date(monday);
     friday.setDate(monday.getDate() + 4);
     const weekEnd = friday.toISOString().slice(0, 10);
-
     const insert = d.prepare(`
       INSERT INTO tasks (title, priority, category, source, due)
       VALUES (@title, @priority, 'weekly', 'manual', @due)
     `);
-    const insertMany = makeTransaction((tasks) => tasks.forEach(t => insert.run({ ...t, due: weekEnd })));
-    insertMany(DEFAULT_WEEKLY);
-    console.log(`[DB] Seeded ${DEFAULT_WEEKLY.length} default weekly tasks for week of ${weekStart}`);
-  }
-}
-
-module.exports = {
-  getDb,
-  getAllTasks,
-  getTask,
-  createTask,
-  updateTask,
-  deleteTask,
-  upsertByExternalId,
-  getSettings,
-  updateSettings,
-  seedDailyTasksIfEmpty,
-  seedWeeklyTasksIfEmpty,
-};
+    const insertMany = makeTransaction((tasks) =>
+      tasks.forEach(t => insert.run({ ...t, due: we
