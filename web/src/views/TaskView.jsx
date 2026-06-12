@@ -175,4 +175,6 @@ function getWeekRange() {
   monday.setDate(now.getDate() - ((day + 6) % 7));
   const friday = new Date(monday);
   friday.setDate(monday.getDate() + 4);
-  const fmt = d => d.toLocaleDateString('en-US', { m
+  const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return fmt(monday) + ' - ' + fmt(friday);
+}

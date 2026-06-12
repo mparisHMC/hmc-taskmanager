@@ -199,4 +199,23 @@ function seedWeeklyTasksIfEmpty() {
       VALUES (@title, @priority, 'weekly', 'manual', @due)
     `);
     const insertMany = makeTransaction((tasks) =>
-      tasks.forEach(t => insert.run({ ...t, due: we
+      tasks.forEach(t => insert.run({ ...t, due: weekEnd }))
+    );
+    insertMany(DEFAULT_WEEKLY);
+    console.log(`[DB] Seeded ${DEFAULT_WEEKLY.length} default weekly tasks for week of ${weekStart}`);
+  }
+}
+
+module.exports = {
+  getDb,
+  getAllTasks,
+  getTask,
+  createTask,
+  updateTask,
+  deleteTask,
+  upsertByExternalId,
+  getSettings,
+  updateSettings,
+  seedDailyTasksIfEmpty,
+  seedWeeklyTasksIfEmpty,
+};
