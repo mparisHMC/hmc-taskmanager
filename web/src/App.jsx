@@ -7,6 +7,8 @@ import SettingsView from './views/SettingsView';
 import LoginView from './views/LoginView';
 import { tasksApi } from './api/client';
 
+var API = import.meta.env.VITE_API_URL || '';
+
 export default function App() {
   const [allTasks, setAllTasks] = useState([]);
   const [user, setUser] = useState(null);
@@ -14,7 +16,7 @@ export default function App() {
 
   // Check if already logged in on mount
   useEffect(() => {
-    fetch('/auth/me', { credentials: 'include' })
+    fetch(API + '/auth/me', { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data?.user) setUser(data.user); })
       .finally(() => setAuthChecked(true));
@@ -30,7 +32,7 @@ export default function App() {
   }
 
   async function handleLogout() {
-    await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+    await fetch(API + '/auth/logout', { method: 'POST', credentials: 'include' });
     setUser(null);
     setAllTasks([]);
   }

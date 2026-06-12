@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 
+var API = import.meta.env.VITE_API_URL || '';
+
 export default function LoginView({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -12,7 +14,7 @@ export default function LoginView({ onLogin }) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/auth/login', {
+      const res = await fetch(API + '/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
