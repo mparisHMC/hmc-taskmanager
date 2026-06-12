@@ -19,7 +19,10 @@ router.post('/login', async (req, res) => {
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
   const { data, error } = await apexSupabase.auth.signInWithPassword({ email, password });
-  if (error) return res.status(401).json({ error: 'Invalid email or password' });
+  if (error) {
+    console.error('[Auth] Supabase login error:', error.message, error.status, error.code);
+    return res.status(401).json({ error: error.message || 'Invalid email or password' });
+  }
 
   const user = data.user;
   req.session.user = {
