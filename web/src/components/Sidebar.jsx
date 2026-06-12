@@ -1,69 +1,114 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 
-const navItems = [
+var navItems = [
   { to: '/daily',        icon: '☀️', label: 'Daily',        key: 'daily' },
   { to: '/weekly',       icon: '📅', label: 'Weekly',       key: 'weekly' },
   { to: '/integrations', icon: '🔗', label: 'Integrations', key: null },
   { to: '/settings',     icon: '⚙️', label: 'Settings',     key: null },
 ];
 
-export default function Sidebar({ tasks, userName, onLogout }) {
+function navLinkStyle(isActive) {
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    width: '100%',
+    padding: '10px 12px',
+    borderRadius: 8,
+    textDecoration: 'none',
+    background: isActive ? '#4338ca' : 'transparent',
+    color: isActive ? '#fff' : '#a5b4fc',
+    fontSize: 14,
+    fontWeight: isActive ? 600 : 400,
+    marginBottom: 2,
+  };
+}
+
+function getNavStyle(obj) {
+  return navLinkStyle(obj.isActive);
+}
+
+var badgeStyle = {
+  marginLeft: 'auto',
+  background: '#6366f1',
+  color: '#fff',
+  borderRadius: 99,
+  fontSize: 11,
+  padding: '1px 7px',
+  fontWeight: 700,
+};
+
+var avatarStyle = {
+  width: 36,
+  height: 36,
+  borderRadius: '50%',
+  background: '#6366f1',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: '#fff',
+  fontWeight: 700,
+  fontSize: 15,
+  marginBottom: 8,
+};
+
+var signOutStyle = {
+  background: 'none',
+  border: '1px solid #312e81',
+  borderRadius: 6,
+  color: '#818cf8',
+  fontSize: 11,
+  padding: '4px 10px',
+  cursor: 'pointer',
+  width: '100%',
+  textAlign: 'left',
+};
+
+export default function Sidebar(props) {
+  var tasks = props.tasks;
+  var userName = props.userName;
+  var onLogout = props.onLogout;
+
   function countPending(category) {
-    return tasks.filter(t => t.category === category && !t.done).length;
+    return tasks.filter(function(t) { return t.category === category && !t.done; }).length;
   }
 
   return (
-    <aside style={{
-      width: 220, background: '#1e1b4b', display: 'flex', flexDirection: 'column',
-      padding: '24px 0', flexShrink: 0, height: '100vh',
-    }}>
-      {/* Logo */}
+    <aside style={{ width: 220, background: '#1e1b4b', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0, height: '100vh' }}>
       <div style={{ padding: '0 20px 20px', borderBottom: '1px solid #312e81' }}>
         <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: -0.5 }}>
-          ✅ TaskFlow
+          TaskFlow
         </div>
         <div style={{ fontSize: 12, color: '#a5b4fc', marginTop: 2 }}>Health Market Connect</div>
       </div>
 
-      {/* Nav */}
       <nav style={{ flex: 1, padding: '14px 10px' }}>
-        {navItems.map(item => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-              padding: '10px 12px', borderRadius: 8, textDecoration: 'none',
-              background: isActive ? '#4338ca' : 'transparent',
-              color: isActive ? '#fff' : '#a5b4fc',
-              fontSize: 14, fontWeight: isActive ? 600 : 400,
-              marginBottom: 2,
-            })}
-          >
-            <span>{item.icon}</span>
-            <span>{item.label}</span>
-            {item.key && (
-              <span style={{
-                marginLeft: 'auto', background: '#6366f1', color: '#fff',
-                borderRadius: 99, fontSize: 11, padding: '1px 7px', fontWeight: 700,
-              }}>
-                {countPending(item.key)}
-              </span>
-            )}
-          </NavLink>
-        ))}
+        {navItems.map(function(item) {
+          return (
+            <NavLink key={item.to} to={item.to} style={getNavStyle}>
+              <span>{item.icon}</span>
+              <span>{item.label}</span>
+              {item.key ? (
+                <span style={badgeStyle}>{countPending(item.key)}</span>
+              ) : null}
+            </NavLink>
+          );
+        })}
       </nav>
 
-      {/* User footer */}
       <div style={{ padding: '14px 20px', borderTop: '1px solid #312e81' }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: '50%', background: '#6366f1',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#fff', fontWeight: 700, fontSize: 15, marginBottom: 8,
-        }}>
+        <div style={avatarStyle}>
           {(userName || 'M')[0].toUpperCase()}
         </div>
         <div style={{ fontSize: 13, color: '#e0e7ff', fontWeight: 600 }}>{userName || 'Mackenzie'}</div>
         <div style={{ fontSize: 11, color: '#818cf8', marginBottom: 8 }}>Project Coordinator</div>
-      
+        {onLogout ? (
+          <button onClick={onLogout} style={signOutStyle}>
+            Sign out
+          </button>
+        ) : null}
+      </div>
+    </aside>
+  );
+}
