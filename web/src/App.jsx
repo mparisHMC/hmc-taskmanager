@@ -35,6 +35,10 @@ export default function App() {
     setAllTasks([]);
   }
 
+  function handleNameChange(name) {
+    setUser(function(u) { return Object.assign({}, u, { name: name }); });
+  }
+
   if (!authChecked) return null;
   if (!user) return <LoginView onLogin={setUser} />;
 
@@ -42,4 +46,16 @@ export default function App() {
     <BrowserRouter>
       <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
         <Sidebar tasks={allTasks} userName={user.name} onLogout={handleLogout} />
-        <main style={{ flex: 1, overflow: 'hidden', disp
+        <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/daily" replace />} />
+            <Route path="/daily"  element={<TaskView category="daily"  onTaskChange={refreshAll} />} />
+            <Route path="/weekly" element={<TaskView category="weekly" onTaskChange={refreshAll} />} />
+            <Route path="/integrations" element={<IntegrationsView />} />
+            <Route path="/settings" element={<SettingsView onNameChange={handleNameChange} />} />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
+  );
+}
